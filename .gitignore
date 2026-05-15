@@ -1,0 +1,7 @@
+target/
+.idea/
+*.class
+*.jar
+*.log
+frontend/node_modules/
+frontend/dist/
