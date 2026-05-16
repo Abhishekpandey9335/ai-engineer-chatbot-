@@ -48,4 +48,8 @@ public class AuthController {
     public ResponseEntity<?> getUserCount() {
         return ResponseEntity.ok(Map.of("totalUsers", userRepository.count()));
     }
+    @GetMapping("/users")
+    public ResponseEntity<?> getAllUsers() {
+        return ResponseEntity.ok(userRepository.findAll());
+    }
 }
