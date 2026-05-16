@@ -50,6 +50,14 @@ public class AuthController {
     }
     @GetMapping("/users")
     public ResponseEntity<?> getAllUsers() {
-        return ResponseEntity.ok(userRepository.findAll());
+        return ResponseEntity.ok(
+                userRepository.findAll().stream()
+                        .map(u -> Map.of(
+                                "id", u.getId(),
+                                "email", u.getEmail(),
+                                "username", u.getUsername()
+                        ))
+                        .toList()
+        );
     }
 }
