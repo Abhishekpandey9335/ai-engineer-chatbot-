@@ -20,15 +20,22 @@ function PublicRoute({ children }) {
   return isAuthenticated ? <Navigate to="/dashboard" replace /> : children
 }
 
+function RootRoute() {
+  const isAuthenticated = useAuthStore((s) => !!s.token)
+  return isAuthenticated ? <Navigate to="/dashboard" replace /> : <LandingPage />
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Landing page - guests ko dikhega, logged in users dashboard jayenge */}
+        <Route path="/" element={<RootRoute />} />
+
         <Route path="/login"  element={<PublicRoute><LoginPage /></PublicRoute>} />
         <Route path="/signup" element={<PublicRoute><SignupPage /></PublicRoute>} />
-<Route path="/home" element={<LandingPage />} />
-<Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
-          <Route index element={<Navigate to="/dashboard" replace />} />
+
+        <Route element={<PrivateRoute><Layout /></PrivateRoute>}>
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="repositories" element={<RepositoriesPage />} />
           <Route path="repositories/:id" element={<RepositoryDetailPage />} />
@@ -36,7 +43,8 @@ export default function App() {
           <Route path="chat/:repoId" element={<ChatPage />} />
           <Route path="analytics" element={<AnalyticsPage />} />
         </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
+
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   )
