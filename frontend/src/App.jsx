@@ -36,7 +36,7 @@ export default function App() {
           <Route path="chat/:repoId" element={<ChatPage />} />
           <Route path="analytics" element={<AnalyticsPage />} />
         </Route>
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   )
