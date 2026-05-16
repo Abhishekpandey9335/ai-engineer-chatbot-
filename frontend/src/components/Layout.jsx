@@ -32,7 +32,7 @@ export default function Layout() {
             <Bot className="w-5 h-5 text-white" />
           </div>
           <div>
-            <p className="font-bold text-white text-sm">AI Engineer</p>
+            <p className="font-bold text-white text-sm">APex-Ai </p>
             <p className="text-xs text-gray-500">Code Analysis Agent</p>
           </div>
         </div>
