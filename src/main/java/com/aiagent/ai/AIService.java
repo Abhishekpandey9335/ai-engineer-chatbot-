@@ -94,22 +94,24 @@ public class AIService {
                     .orElse(null);
             if (repo != null && repo.getLocalPath() != null) {
                 Map<String, String> files = fileScannerService.scanRepository(repo.getLocalPath());
-                codeContext = fileScannerService.buildCodeContext(files, 40_000);
+                codeContext = fileScannerService.buildCodeContext(files, 8000);
             }
         }
 
-        // ✅ Poori history fetch karo
         List<ChatHistoryEntity> history = chatHistoryRepository
                 .findByUserIdOrderByCreatedAtAsc(currentUser.getId());
 
+        // Sirf last 6 messages rakho
+        if (history.size() > 6) {
+            history = history.subList(history.size() - 6, history.size());
+        }
+
         String userPrompt = promptManager.buildChatPrompt(message, codeContext);
 
-        // ✅ History ke saath AI call karo
         String aiResponse = callOpenAIWithHistory(
                 promptManager.getSystemPrompt(), history, userPrompt
         );
 
-        // Save user message
         ChatHistoryEntity userMsg = ChatHistoryEntity.builder()
                 .user(currentUser)
                 .repository(repo)
@@ -118,7 +120,6 @@ public class AIService {
                 .build();
         chatHistoryRepository.save(userMsg);
 
-        // Save AI message
         ChatHistoryEntity aiMsg = ChatHistoryEntity.builder()
                 .user(currentUser)
                 .repository(repo)
@@ -141,23 +142,20 @@ public class AIService {
 
         ObjectNode body = objectMapper.createObjectNode();
         body.put("model", openAiModel);
-        body.put("max_tokens", 4096);
+        body.put("max_tokens", 1024);
 
         ArrayNode messages = body.putArray("messages");
 
-        // System message
         ObjectNode systemMsg = messages.addObject();
         systemMsg.put("role", "system");
         systemMsg.put("content", systemPrompt);
 
-        // ✅ Purani history add karo
         for (ChatHistoryEntity h : history) {
             ObjectNode msg = messages.addObject();
             msg.put("role", h.getSender() == ChatHistoryEntity.Sender.USER ? "user" : "assistant");
             msg.put("content", h.getMessage());
         }
 
-        // Current user message
         ObjectNode userMsg = messages.addObject();
         userMsg.put("role", "user");
         userMsg.put("content", currentUserPrompt);
@@ -191,7 +189,7 @@ public class AIService {
 
         ObjectNode body = objectMapper.createObjectNode();
         body.put("model", openAiModel);
-        body.put("max_tokens", 4096);
+        body.put("max_tokens", 1024);
 
         ArrayNode messages = body.putArray("messages");
 
