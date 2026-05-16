@@ -1,5 +1,6 @@
 package com.aiagent.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -18,12 +19,14 @@ public class ChatHistoryEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "user_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "password", "repositories", "chatHistories"})
     private UserEntity user;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "repository_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "user", "chatHistories"})
     private RepositoryEntity repository;
 
     @Column(name = "message", columnDefinition = "TEXT", nullable = false)
