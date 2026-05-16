@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import LandingPage from './pages/LandingPage'
 import { useAuthStore } from './store/authStore'
 import LoginPage from './pages/LoginPage'
 import SignupPage from './pages/SignupPage'
@@ -25,7 +26,8 @@ export default function App() {
       <Routes>
         <Route path="/login"  element={<PublicRoute><LoginPage /></PublicRoute>} />
         <Route path="/signup" element={<PublicRoute><SignupPage /></PublicRoute>} />
-        <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
+<Route path="/home" element={<LandingPage />} />
+<Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="repositories" element={<RepositoriesPage />} />
