@@ -8,12 +8,16 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
 public class AuthController {
 
     private final AuthService authService;
+
+    private final com.aiagent.repository.UserRepository userRepository; // yeh add karo
 
     /**
      * POST /api/auth/register
@@ -37,5 +41,11 @@ public class AuthController {
     ) {
         AuthDto.AuthResponse response = authService.login(request);
         return ResponseEntity.ok(response);
+    }
+
+
+    @GetMapping("/users/count")
+    public ResponseEntity<?> getUserCount() {
+        return ResponseEntity.ok(Map.of("totalUsers", userRepository.count()));
     }
 }
