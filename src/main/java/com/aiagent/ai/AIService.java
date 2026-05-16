@@ -20,6 +20,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -57,10 +58,8 @@ public class AIService {
                         request.getRepositoryId(), currentUser.getId())
                 .orElseThrow(() -> new IllegalArgumentException("Repository not found or access denied"));
 
-        // Build code context
         String codeContext;
         if (request.getFilePath() != null && !request.getFilePath().isBlank()) {
-            // Single file analysis
             String content = fileScannerService.readFile(repo.getLocalPath(), request.getFilePath());
             codeContext = "### File: " + request.getFilePath() + "\n```\n" + content + "\n```\n";
         } else {
@@ -71,7 +70,6 @@ public class AIService {
         String userPrompt = promptManager.buildAnalysisPrompt(codeContext, request.getReportType());
         String aiResponse = callOpenAI(promptManager.getSystemPrompt(), userPrompt);
 
-        // Persist report
         AIReportEntity reportEntity = AIReportEntity.builder()
                 .repository(repo)
                 .reportType(request.getReportType())
@@ -88,7 +86,6 @@ public class AIService {
     // ===== Chat =====
 
     public String chat(String message, Long repositoryId, UserEntity currentUser) throws IOException {
-        // Build optional code context for RAG-style chat
         String codeContext = null;
         RepositoryEntity repo = null;
 
@@ -101,10 +98,18 @@ public class AIService {
             }
         }
 
-        String userPrompt = promptManager.buildChatPrompt(message, codeContext);
-        String aiResponse = callOpenAI(promptManager.getSystemPrompt(), userPrompt);
+        // ✅ Poori history fetch karo
+        List<ChatHistoryEntity> history = chatHistoryRepository
+                .findByUserIdOrderByCreatedAtAsc(currentUser.getId());
 
-        // Persist both sides of the conversation
+        String userPrompt = promptManager.buildChatPrompt(message, codeContext);
+
+        // ✅ History ke saath AI call karo
+        String aiResponse = callOpenAIWithHistory(
+                promptManager.getSystemPrompt(), history, userPrompt
+        );
+
+        // Save user message
         ChatHistoryEntity userMsg = ChatHistoryEntity.builder()
                 .user(currentUser)
                 .repository(repo)
@@ -113,6 +118,7 @@ public class AIService {
                 .build();
         chatHistoryRepository.save(userMsg);
 
+        // Save AI message
         ChatHistoryEntity aiMsg = ChatHistoryEntity.builder()
                 .user(currentUser)
                 .repository(repo)
@@ -124,12 +130,65 @@ public class AIService {
         return aiResponse;
     }
 
-    // ===== Private: HTTP call to OpenAI =====
+    // ===== Private: History ke saath OpenAI call =====
+
+    private String callOpenAIWithHistory(
+            String systemPrompt,
+            List<ChatHistoryEntity> history,
+            String currentUserPrompt
+    ) throws IOException {
+        OkHttpClient client = new OkHttpClient();
+
+        ObjectNode body = objectMapper.createObjectNode();
+        body.put("model", openAiModel);
+        body.put("max_tokens", 4096);
+
+        ArrayNode messages = body.putArray("messages");
+
+        // System message
+        ObjectNode systemMsg = messages.addObject();
+        systemMsg.put("role", "system");
+        systemMsg.put("content", systemPrompt);
+
+        // ✅ Purani history add karo
+        for (ChatHistoryEntity h : history) {
+            ObjectNode msg = messages.addObject();
+            msg.put("role", h.getSender() == ChatHistoryEntity.Sender.USER ? "user" : "assistant");
+            msg.put("content", h.getMessage());
+        }
+
+        // Current user message
+        ObjectNode userMsg = messages.addObject();
+        userMsg.put("role", "user");
+        userMsg.put("content", currentUserPrompt);
+
+        RequestBody requestBody = RequestBody.create(
+                objectMapper.writeValueAsString(body), JSON
+        );
+
+        Request request = new Request.Builder()
+                .url(openAiUrl)
+                .header("Authorization", "Bearer " + openAiKey)
+                .header("Content-Type", "application/json")
+                .post(requestBody)
+                .build();
+
+        try (Response response = client.newCall(request).execute()) {
+            if (!response.isSuccessful()) {
+                String errorBody = response.body() != null ? response.body().string() : "no body";
+                throw new IOException("OpenAI API error " + response.code() + ": " + errorBody);
+            }
+            String responseBody = response.body().string();
+            JsonNode json = objectMapper.readTree(responseBody);
+            return json.path("choices").get(0).path("message").path("content").asText();
+        }
+    }
+
+    // ===== Private: Bina history OpenAI call (analysis ke liye) =====
 
     private String callOpenAI(String systemPrompt, String userPrompt) throws IOException {
         OkHttpClient client = new OkHttpClient();
 
-        // Build request body using Jackson nodes
         ObjectNode body = objectMapper.createObjectNode();
         body.put("model", openAiModel);
         body.put("max_tokens", 4096);
@@ -160,15 +219,9 @@ public class AIService {
                 String errorBody = response.body() != null ? response.body().string() : "no body";
                 throw new IOException("OpenAI API error " + response.code() + ": " + errorBody);
             }
-
             String responseBody = response.body().string();
             JsonNode json = objectMapper.readTree(responseBody);
-            return json
-                    .path("choices")
-                    .get(0)
-                    .path("message")
-                    .path("content")
-                    .asText();
+            return json.path("choices").get(0).path("message").path("content").asText();
         }
     }
 
