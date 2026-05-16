@@ -55,7 +55,7 @@ public class AuthController {
                         .map(u -> Map.of(
                                 "id", u.getId(),
                                 "email", u.getEmail(),
-                                "username", u.getUsername()
+                                "username", u.getDisplayName()
                         ))
                         .toList()
         );
