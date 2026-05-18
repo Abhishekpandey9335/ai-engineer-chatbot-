@@ -1,22 +1,50 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
+
+const UPI_ID_PAYTM  = "9335203841@paytm";
+const UPI_ID_GPAY   = "9335203841@okaxis";
+const UPI_NAME      = "Abhishek Pandey";
 
 export default function LandingPage() {
   const navigate = useNavigate();
   const isAuthenticated = useAuthStore((s) => !!s.token);
 
+  const [donationAmt, setDonationAmt] = useState(99);
+  const [customAmt,   setCustomAmt]   = useState("");
+  const [copied,      setCopied]      = useState(null);
+  const [thankYou,    setThankYou]    = useState(false);
+
+  const AMOUNTS  = [49, 99, 199, 499];
+  const finalAmt = customAmt ? parseInt(customAmt) : donationAmt;
+  const note     = encodeURIComponent("Donation for AI Engineer Startup");
+  const pn       = encodeURIComponent(UPI_NAME);
+
+  const upiPaytm    = `upi://pay?pa=${UPI_ID_PAYTM}&pn=${pn}&am=${finalAmt}&cu=INR&tn=${note}`;
+  const upiGpay     = `tez://upi/pay?pa=${UPI_ID_GPAY}&pn=${pn}&am=${finalAmt}&cu=INR&tn=${note}`;
+  const phonepeLink = `phonepe://pay?pa=${UPI_ID_PAYTM}&pn=${pn}&am=${finalAmt}&cu=INR&tn=${note}`;
+
+  const copyUPI = (id, label) => {
+    navigator.clipboard.writeText(id);
+    setCopied(label);
+    setTimeout(() => setCopied(null), 2000);
+  };
+
+  const handlePay = (link) => {
+    window.location.href = link;
+    setThankYou(true);
+    setTimeout(() => setThankYou(false), 5000);
+  };
+
   const handleFeatureClick = (route) => {
-    if (isAuthenticated) {
-      navigate(route);
-    } else {
-      navigate("/signup");
-    }
+    if (isAuthenticated) navigate(route);
+    else navigate("/signup");
   };
 
   const handleRazorpay = (amount, planName) => {
     const options = {
-      key: "YOUR_RAZORPAY_KEY_ID", // Razorpay dashboard se key lo
-      amount: amount * 100, // paise mein
+      key: "YOUR_RAZORPAY_KEY_ID",
+      amount: amount * 100,
       currency: "INR",
       name: "AI Engineer Agent",
       description: `${planName} Plan`,
@@ -25,23 +53,15 @@ export default function LandingPage() {
         alert(`Payment successful! Payment ID: ${response.razorpay_payment_id}`);
         navigate("/signup");
       },
-      prefill: {
-        name: "",
-        email: "",
-      },
-      theme: {
-        color: "#4F46E5",
-      },
+      prefill: { name: "", email: "" },
+      theme: { color: "#4F46E5" },
     };
     const rzp = new window.Razorpay(options);
     rzp.open();
   };
 
   const loadRazorpay = (amount, planName) => {
-    if (window.Razorpay) {
-      handleRazorpay(amount, planName);
-      return;
-    }
+    if (window.Razorpay) { handleRazorpay(amount, planName); return; }
     const script = document.createElement("script");
     script.src = "https://checkout.razorpay.com/v1/checkout.js";
     script.onload = () => handleRazorpay(amount, planName);
@@ -49,36 +69,16 @@ export default function LandingPage() {
   };
 
   const features = [
-    {
-      icon: "🐛",
-      title: "Bug Detection",
-      desc: "AI automatically finds bugs and suggests fixes in your code",
-      route: "/repositories",
-    },
-    {
-      icon: "🔒",
-      title: "Security Audit",
-      desc: "Detect security vulnerabilities in your codebase instantly",
-      route: "/repositories",
-    },
-    {
-      icon: "💬",
-      title: "AI Chat",
-      desc: "Chat directly with your codebase — ask anything about your code",
-      route: "/chat",
-    },
-    {
-      icon: "📊",
-      title: "Analytics",
-      desc: "Track your repo health, reports, and activity over time",
-      route: "/analytics",
-    },
+    { icon: "🐛", title: "Bug Detection",  desc: "AI automatically finds bugs and suggests fixes in your code",    route: "/repositories" },
+    { icon: "🔒", title: "Security Audit", desc: "Detect security vulnerabilities in your codebase instantly",      route: "/repositories" },
+    { icon: "💬", title: "AI Chat",        desc: "Chat directly with your codebase — ask anything about your code", route: "/chat" },
+    { icon: "📊", title: "Analytics",      desc: "Track your repo health, reports, and activity over time",         route: "/analytics" },
   ];
 
   return (
     <div style={{ fontFamily: "sans-serif", maxWidth: "960px", margin: "0 auto", padding: "2rem 1rem" }}>
 
-      {/* Navbar */}
+      {/* ── Navbar ── */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "3rem" }}>
         <div style={{ fontWeight: "700", fontSize: "18px" }}>🤖 AI Engineer Agent</div>
         <div style={{ display: "flex", gap: "12px" }}>
@@ -102,7 +102,7 @@ export default function LandingPage() {
         </div>
       </div>
 
-      {/* Hero */}
+      {/* ── Hero ── */}
       <div style={{ textAlign: "center", padding: "2rem 0 3rem" }}>
         <div style={{ display: "inline-block", background: "#EEF2FF", color: "#4F46E5", fontSize: "12px", padding: "4px 14px", borderRadius: "999px", marginBottom: "1.5rem" }}>
           ✨ Powered by GPT-4o
@@ -128,13 +128,12 @@ export default function LandingPage() {
         </div>
       </div>
 
-      {/* Features */}
+      {/* ── Features ── */}
       <div style={{ marginBottom: "3rem" }}>
         <h2 style={{ textAlign: "center", fontWeight: "700", marginBottom: "1.5rem", fontSize: "1.5rem" }}>What can you do?</h2>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px" }}>
           {features.map((f) => (
-            <div key={f.title}
-              onClick={() => handleFeatureClick(f.route)}
+            <div key={f.title} onClick={() => handleFeatureClick(f.route)}
               style={{ border: "1px solid #E5E7EB", borderRadius: "12px", padding: "1.5rem", cursor: "pointer" }}
               onMouseEnter={e => e.currentTarget.style.borderColor = "#4F46E5"}
               onMouseLeave={e => e.currentTarget.style.borderColor = "#E5E7EB"}>
@@ -149,7 +148,7 @@ export default function LandingPage() {
         </div>
       </div>
 
-      {/* Pricing */}
+      {/* ── Pricing ── */}
       <div style={{ marginBottom: "3rem" }}>
         <h2 style={{ textAlign: "center", fontWeight: "700", marginBottom: "0.5rem", fontSize: "1.5rem" }}>Plans & Pricing</h2>
         <p style={{ textAlign: "center", color: "#6B7280", fontSize: "14px", marginBottom: "1.5rem" }}>
@@ -157,7 +156,7 @@ export default function LandingPage() {
         </p>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "16px" }}>
 
-          {/* Free Plan */}
+          {/* Free */}
           <div style={{ border: "1px solid #E5E7EB", borderRadius: "12px", padding: "1.5rem" }}>
             <div style={{ fontWeight: "600", marginBottom: "8px" }}>Free</div>
             <div style={{ fontSize: "2rem", fontWeight: "700", marginBottom: "4px" }}>₹0</div>
@@ -165,14 +164,13 @@ export default function LandingPage() {
             {["2 repos/month", "Basic code review", "AI chat (10 messages)"].map(f => (
               <div key={f} style={{ fontSize: "13px", marginBottom: "6px" }}>✅ {f}</div>
             ))}
-            <button
-              onClick={() => navigate("/signup")}
+            <button onClick={() => navigate("/signup")}
               style={{ width: "100%", marginTop: "16px", padding: "10px", border: "1px solid #D1D5DB", borderRadius: "8px", cursor: "pointer", background: "white" }}>
               Get Started
             </button>
           </div>
 
-          {/* Pro Plan */}
+          {/* Pro */}
           <div style={{ border: "2px solid #4F46E5", borderRadius: "12px", padding: "1.5rem", position: "relative" }}>
             <div style={{ position: "absolute", top: "-12px", left: "50%", transform: "translateX(-50%)", background: "#4F46E5", color: "white", fontSize: "11px", padding: "3px 14px", borderRadius: "999px", whiteSpace: "nowrap" }}>
               Most Popular
@@ -185,14 +183,13 @@ export default function LandingPage() {
             {["Unlimited repos", "All AI features", "Security audit", "Priority support"].map(f => (
               <div key={f} style={{ fontSize: "13px", marginBottom: "6px" }}>✅ {f}</div>
             ))}
-            <button
-              onClick={() => loadRazorpay(299, "Pro")}
+            <button onClick={() => loadRazorpay(299, "Pro")}
               style={{ width: "100%", marginTop: "16px", padding: "10px", border: "none", borderRadius: "8px", cursor: "pointer", background: "#4F46E5", color: "white", fontWeight: "600" }}>
               Buy Now — ₹299/mo
             </button>
           </div>
 
-          {/* Team Plan */}
+          {/* Team */}
           <div style={{ border: "1px solid #E5E7EB", borderRadius: "12px", padding: "1.5rem" }}>
             <div style={{ fontWeight: "600", marginBottom: "8px" }}>Team</div>
             <div style={{ fontSize: "2rem", fontWeight: "700", marginBottom: "4px" }}>
@@ -202,17 +199,157 @@ export default function LandingPage() {
             {["5 team members", "Shared dashboard", "Custom reports", "Dedicated support"].map(f => (
               <div key={f} style={{ fontSize: "13px", marginBottom: "6px" }}>✅ {f}</div>
             ))}
-            <button
-              onClick={() => loadRazorpay(999, "Team")}
+            <button onClick={() => loadRazorpay(999, "Team")}
               style={{ width: "100%", marginTop: "16px", padding: "10px", border: "1px solid #D1D5DB", borderRadius: "8px", cursor: "pointer", background: "white" }}>
               Buy Now — ₹999/mo
             </button>
           </div>
-
         </div>
       </div>
 
-      {/* Footer */}
+      {/* ══════════════════════════════════════
+              💛 DONATE SECTION
+      ══════════════════════════════════════ */}
+      <div style={{
+        marginBottom: "3rem",
+        background: "linear-gradient(135deg, #EEF2FF 0%, #F5F3FF 100%)",
+        border: "1px solid #C7D2FE",
+        borderRadius: "20px",
+        padding: "2.5rem 2rem",
+        textAlign: "center",
+      }}>
+
+        <div style={{ display: "inline-block", background: "#EEF2FF", border: "1px solid #C7D2FE", color: "#4F46E5", fontSize: "11px", fontWeight: "700", padding: "4px 14px", borderRadius: "999px", marginBottom: "1rem", letterSpacing: "1px" }}>
+          ❤️ SUPPORT US
+        </div>
+
+        <h2 style={{ fontSize: "1.75rem", fontWeight: "700", marginBottom: "0.5rem", color: "#1F2937" }}>
+          Donate for Our Startup 🚀
+        </h2>
+        <p style={{ color: "#6B7280", fontSize: "14px", maxWidth: "420px", margin: "0 auto 2rem", lineHeight: "1.7" }}>
+          Aapka ek chhota sa support hamare AI platform ko aur behtar banane mein help karega. Dil se shukriya! 🙏
+        </p>
+
+        {/* Amount Buttons */}
+        <div style={{ display: "flex", justifyContent: "center", gap: "10px", flexWrap: "wrap", marginBottom: "1rem" }}>
+          {AMOUNTS.map((amt) => (
+            <button key={amt}
+              onClick={() => { setDonationAmt(amt); setCustomAmt(""); }}
+              style={{
+                padding: "10px 22px", borderRadius: "10px", fontWeight: "600", fontSize: "14px", cursor: "pointer",
+                border:     (donationAmt === amt && !customAmt) ? "2px solid #4F46E5" : "1px solid #D1D5DB",
+                background: (donationAmt === amt && !customAmt) ? "#4F46E5" : "white",
+                color:      (donationAmt === amt && !customAmt) ? "white"   : "#374151",
+              }}>
+              ₹{amt}
+            </button>
+          ))}
+        </div>
+
+        {/* Custom Amount */}
+        <div style={{ marginBottom: "1.5rem" }}>
+          <input
+            type="number"
+            placeholder="Ya custom amount daalein (₹)"
+            value={customAmt}
+            onChange={(e) => { setCustomAmt(e.target.value); setDonationAmt(null); }}
+            style={{ padding: "10px 16px", borderRadius: "10px", border: "1px solid #D1D5DB", fontSize: "14px", width: "220px", outline: "none", textAlign: "center" }}
+          />
+        </div>
+
+        {finalAmt > 0 && (
+          <p style={{ color: "#4F46E5", fontWeight: "700", fontSize: "15px", marginBottom: "1.5rem" }}>
+            Aap ₹{finalAmt} donate karenge 🎉
+          </p>
+        )}
+
+        {/* ── Paytm Button ── */}
+        <button onClick={() => handlePay(upiPaytm)}
+          style={{
+            background: "#00BAF2", color: "white", border: "none",
+            padding: "14px 36px", borderRadius: "12px", fontSize: "15px",
+            fontWeight: "700", cursor: "pointer", display: "block",
+            margin: "0 auto 12px", width: "260px",
+            boxShadow: "0 4px 16px rgba(0,186,242,0.35)",
+          }}>
+          🔵 Paytm se Pay — ₹{finalAmt || "?"}
+        </button>
+
+        {/* ── GPay Button ── */}
+        <button onClick={() => handlePay(upiGpay)}
+          style={{
+            background: "#34A853", color: "white", border: "none",
+            padding: "14px 36px", borderRadius: "12px", fontSize: "15px",
+            fontWeight: "700", cursor: "pointer", display: "block",
+            margin: "0 auto 12px", width: "260px",
+            boxShadow: "0 4px 16px rgba(52,168,83,0.35)",
+          }}>
+          🟢 GPay se Pay — ₹{finalAmt || "?"}
+        </button>
+
+        {/* ── PhonePe Button ── */}
+        <button onClick={() => handlePay(phonepeLink)}
+          style={{
+            background: "#5F259F", color: "white", border: "none",
+            padding: "14px 36px", borderRadius: "12px", fontSize: "15px",
+            fontWeight: "700", cursor: "pointer", display: "block",
+            margin: "0 auto 1.5rem", width: "260px",
+            boxShadow: "0 4px 16px rgba(95,37,159,0.35)",
+          }}>
+          🟣 PhonePe se Pay — ₹{finalAmt || "?"}
+        </button>
+
+        {/* Divider */}
+        <div style={{ display: "flex", alignItems: "center", gap: "12px", maxWidth: "360px", margin: "0 auto 1.25rem" }}>
+          <div style={{ flex: 1, height: "1px", background: "#D1D5DB" }} />
+          <span style={{ color: "#9CA3AF", fontSize: "12px" }}>ya UPI ID copy karein</span>
+          <div style={{ flex: 1, height: "1px", background: "#D1D5DB" }} />
+        </div>
+
+        {/* UPI ID Copy — Paytm */}
+        <div onClick={() => copyUPI(UPI_ID_PAYTM, "paytm")}
+          style={{
+            display: "inline-flex", alignItems: "center", gap: "10px",
+            background: "white", border: "1px dashed #00BAF2", borderRadius: "10px",
+            padding: "10px 20px", cursor: "pointer", fontSize: "14px",
+            fontWeight: "600", color: "#00BAF2", marginBottom: "10px",
+            marginRight: "8px",
+          }}>
+          <span>📋</span>
+          <span>{UPI_ID_PAYTM}</span>
+          <span style={{ fontSize: "12px", color: copied === "paytm" ? "#16A34A" : "#9CA3AF", fontWeight: "400" }}>
+            {copied === "paytm" ? "✅ Copied!" : "Copy"}
+          </span>
+        </div>
+
+        {/* UPI ID Copy — GPay */}
+        <div onClick={() => copyUPI(UPI_ID_GPAY, "gpay")}
+          style={{
+            display: "inline-flex", alignItems: "center", gap: "10px",
+            background: "white", border: "1px dashed #34A853", borderRadius: "10px",
+            padding: "10px 20px", cursor: "pointer", fontSize: "14px",
+            fontWeight: "600", color: "#34A853", marginBottom: "1.5rem",
+          }}>
+          <span>📋</span>
+          <span>{UPI_ID_GPAY}</span>
+          <span style={{ fontSize: "12px", color: copied === "gpay" ? "#16A34A" : "#9CA3AF", fontWeight: "400" }}>
+            {copied === "gpay" ? "✅ Copied!" : "Copy"}
+          </span>
+        </div>
+
+        {/* Thank You */}
+        {thankYou && (
+          <div style={{
+            marginTop: "1rem", background: "#F0FDF4", border: "1px solid #86EFAC",
+            color: "#16A34A", borderRadius: "10px", padding: "12px 20px",
+            fontSize: "14px", fontWeight: "600", maxWidth: "360px", margin: "1rem auto 0",
+          }}>
+            🎉 Bahut shukriya! Aapka support hamare liye bahut mayne rakhta hai! ❤️
+          </div>
+        )}
+      </div>
+
+      {/* ── Footer ── */}
       <div style={{ textAlign: "center", color: "#9CA3AF", fontSize: "13px", paddingTop: "2rem", borderTop: "1px solid #E5E7EB" }}>
         AI Engineer Agent · Built with Spring Boot + React + GPT-4o
       </div>
