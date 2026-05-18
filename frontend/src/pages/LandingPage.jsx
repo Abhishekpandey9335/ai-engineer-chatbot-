@@ -1,38 +1,28 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
+import qrImage from "../assets/gpay-qr.jpeg";
 
-const UPI_ID_PAYTM  = "9335203841@paytm";
-const UPI_ID_GPAY   = "9335203841@okaxis";
-const UPI_NAME      = "Abhishek Pandey";
+const UPI_ID = "abhishekpandey29632@oksbi";
+const UPI_NAME = "Abhishek Pandey";
 
 export default function LandingPage() {
   const navigate = useNavigate();
   const isAuthenticated = useAuthStore((s) => !!s.token);
 
   const [donationAmt, setDonationAmt] = useState(99);
-  const [customAmt,   setCustomAmt]   = useState("");
-  const [copied,      setCopied]      = useState(null);
-  const [thankYou,    setThankYou]    = useState(false);
+  const [customAmt, setCustomAmt] = useState("");
+  const [copied, setCopied] = useState(false);
+  const [thankYou, setThankYou] = useState(false);
 
-  const AMOUNTS  = [49, 99, 199, 499];
+  const AMOUNTS = [49, 99, 199, 499];
   const finalAmt = customAmt ? parseInt(customAmt) : donationAmt;
-  const note     = encodeURIComponent("Donation for AI Engineer Startup");
-  const pn       = encodeURIComponent(UPI_NAME);
 
-  const upiPaytm    = `upi://pay?pa=${UPI_ID_PAYTM}&pn=${pn}&am=${finalAmt}&cu=INR&tn=${note}`;
-  const upiGpay     = `tez://upi/pay?pa=${UPI_ID_GPAY}&pn=${pn}&am=${finalAmt}&cu=INR&tn=${note}`;
-  const phonepeLink = `phonepe://pay?pa=${UPI_ID_PAYTM}&pn=${pn}&am=${finalAmt}&cu=INR&tn=${note}`;
-
-  const copyUPI = (id, label) => {
-    navigator.clipboard.writeText(id);
-    setCopied(label);
-    setTimeout(() => setCopied(null), 2000);
-  };
-
-  const handlePay = (link) => {
-    window.location.href = link;
+  const copyUPI = () => {
+    navigator.clipboard.writeText(UPI_ID);
+    setCopied(true);
     setThankYou(true);
+    setTimeout(() => setCopied(false), 2000);
     setTimeout(() => setThankYou(false), 5000);
   };
 
@@ -69,10 +59,10 @@ export default function LandingPage() {
   };
 
   const features = [
-    { icon: "🐛", title: "Bug Detection",  desc: "AI automatically finds bugs and suggests fixes in your code",    route: "/repositories" },
-    { icon: "🔒", title: "Security Audit", desc: "Detect security vulnerabilities in your codebase instantly",      route: "/repositories" },
-    { icon: "💬", title: "AI Chat",        desc: "Chat directly with your codebase — ask anything about your code", route: "/chat" },
-    { icon: "📊", title: "Analytics",      desc: "Track your repo health, reports, and activity over time",         route: "/analytics" },
+    { icon: "🐛", title: "Bug Detection", desc: "AI automatically finds bugs and suggests fixes in your code", route: "/repositories" },
+    { icon: "🔒", title: "Security Audit", desc: "Detect security vulnerabilities in your codebase instantly", route: "/repositories" },
+    { icon: "💬", title: "AI Chat", desc: "Chat directly with your codebase — ask anything about your code", route: "/chat" },
+    { icon: "📊", title: "Analytics", desc: "Track your repo health, reports, and activity over time", route: "/analytics" },
   ];
 
   return (
@@ -237,9 +227,10 @@ export default function LandingPage() {
               onClick={() => { setDonationAmt(amt); setCustomAmt(""); }}
               style={{
                 padding: "10px 22px", borderRadius: "10px", fontWeight: "600", fontSize: "14px", cursor: "pointer",
-                border:     (donationAmt === amt && !customAmt) ? "2px solid #4F46E5" : "1px solid #D1D5DB",
+                border: (donationAmt === amt && !customAmt) ? "2px solid #4F46E5" : "1px solid #D1D5DB",
                 background: (donationAmt === amt && !customAmt) ? "#4F46E5" : "white",
-                color:      (donationAmt === amt && !customAmt) ? "white"   : "#374151",
+                color: (donationAmt === amt && !customAmt) ? "white" : "#374151",
+                transition: "all 0.15s",
               }}>
               ₹{amt}
             </button>
@@ -263,90 +254,92 @@ export default function LandingPage() {
           </p>
         )}
 
-        {/* ── Paytm Button ── */}
-        <button onClick={() => handlePay(upiPaytm)}
-          style={{
-            background: "#00BAF2", color: "white", border: "none",
-            padding: "14px 36px", borderRadius: "12px", fontSize: "15px",
-            fontWeight: "700", cursor: "pointer", display: "block",
-            margin: "0 auto 12px", width: "260px",
-            boxShadow: "0 4px 16px rgba(0,186,242,0.35)",
-          }}>
-          🔵 Paytm se Pay — ₹{finalAmt || "?"}
-        </button>
+        {/* ── QR Code Card ── */}
+        <div style={{
+          background: "white",
+          border: "1px solid #E0E7FF",
+          borderRadius: "20px",
+          padding: "2rem 2rem 1.5rem",
+          display: "inline-block",
+          margin: "0 auto 1.75rem",
+          boxShadow: "0 4px 24px rgba(79,70,229,0.10)",
+          minWidth: "240px",
+        }}>
+          {/* GPay logo row */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", marginBottom: "1rem" }}>
+            <div style={{ background: "linear-gradient(135deg, #4285F4, #34A853, #FBBC05, #EA4335)", borderRadius: "50%", width: "28px", height: "28px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <span style={{ color: "white", fontSize: "13px", fontWeight: "800" }}>G</span>
+            </div>
+            <span style={{ fontWeight: "700", fontSize: "16px", color: "#1F2937", letterSpacing: "0.5px" }}>Pay</span>
+            <span style={{ background: "#EEF2FF", color: "#4F46E5", fontSize: "10px", fontWeight: "700", padding: "2px 8px", borderRadius: "999px" }}>SCAN & PAY</span>
+          </div>
 
-        {/* ── GPay Button ── */}
-        <button onClick={() => handlePay(upiGpay)}
-          style={{
-            background: "#34A853", color: "white", border: "none",
-            padding: "14px 36px", borderRadius: "12px", fontSize: "15px",
-            fontWeight: "700", cursor: "pointer", display: "block",
-            margin: "0 auto 12px", width: "260px",
-            boxShadow: "0 4px 16px rgba(52,168,83,0.35)",
+          {/* QR Image */}
+          <div style={{
+            background: "white",
+            border: "2px solid #E0E7FF",
+            borderRadius: "14px",
+            padding: "10px",
+            display: "inline-block",
+            marginBottom: "1rem",
           }}>
-          🟢 GPay se Pay — ₹{finalAmt || "?"}
-        </button>
+            <img
+              src={qrImage}
+              alt="GPay QR Code — abhishekpandey29632@oksbi"
+              style={{ width: "180px", height: "180px", display: "block", borderRadius: "8px" }}
+            />
+          </div>
 
-        {/* ── PhonePe Button ── */}
-        <button onClick={() => handlePay(phonepeLink)}
-          style={{
-            background: "#5F259F", color: "white", border: "none",
-            padding: "14px 36px", borderRadius: "12px", fontSize: "15px",
-            fontWeight: "700", cursor: "pointer", display: "block",
-            margin: "0 auto 1.5rem", width: "260px",
-            boxShadow: "0 4px 16px rgba(95,37,159,0.35)",
-          }}>
-          🟣 PhonePe se Pay — ₹{finalAmt || "?"}
-        </button>
+          {/* Name */}
+          <div style={{ fontWeight: "700", fontSize: "15px", color: "#1F2937", marginBottom: "4px" }}>
+            Abhishekpandey9335
+          </div>
+          <div style={{ fontSize: "12px", color: "#6B7280", marginBottom: "1rem" }}>
+            Scan with GPay, PhonePe, Paytm — any UPI app
+          </div>
 
-        {/* Divider */}
-        <div style={{ display: "flex", alignItems: "center", gap: "12px", maxWidth: "360px", margin: "0 auto 1.25rem" }}>
-          <div style={{ flex: 1, height: "1px", background: "#D1D5DB" }} />
-          <span style={{ color: "#9CA3AF", fontSize: "12px" }}>ya UPI ID copy karein</span>
-          <div style={{ flex: 1, height: "1px", background: "#D1D5DB" }} />
+          {/* Divider */}
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "1rem" }}>
+            <div style={{ flex: 1, height: "1px", background: "#E5E7EB" }} />
+            <span style={{ color: "#9CA3AF", fontSize: "11px" }}>ya UPI ID copy karein</span>
+            <div style={{ flex: 1, height: "1px", background: "#E5E7EB" }} />
+          </div>
+
+          {/* UPI ID Copy Chip */}
+          <div
+            onClick={copyUPI}
+            style={{
+              display: "inline-flex", alignItems: "center", gap: "10px",
+              background: copied ? "#F0FDF4" : "#F9FAFB",
+              border: `1px dashed ${copied ? "#34A853" : "#A5B4FC"}`,
+              borderRadius: "10px", padding: "10px 18px",
+              cursor: "pointer", fontSize: "13px",
+              fontWeight: "600", color: copied ? "#16A34A" : "#4F46E5",
+              transition: "all 0.2s",
+            }}>
+            <span style={{ fontSize: "16px" }}>{copied ? "✅" : "📋"}</span>
+            <span>{UPI_ID}</span>
+            <span style={{ fontSize: "11px", fontWeight: "400", color: copied ? "#16A34A" : "#9CA3AF" }}>
+              {copied ? "Copied!" : "Copy"}
+            </span>
+          </div>
         </div>
 
-        {/* UPI ID Copy — Paytm */}
-        <div onClick={() => copyUPI(UPI_ID_PAYTM, "paytm")}
-          style={{
-            display: "inline-flex", alignItems: "center", gap: "10px",
-            background: "white", border: "1px dashed #00BAF2", borderRadius: "10px",
-            padding: "10px 20px", cursor: "pointer", fontSize: "14px",
-            fontWeight: "600", color: "#00BAF2", marginBottom: "10px",
-            marginRight: "8px",
-          }}>
-          <span>📋</span>
-          <span>{UPI_ID_PAYTM}</span>
-          <span style={{ fontSize: "12px", color: copied === "paytm" ? "#16A34A" : "#9CA3AF", fontWeight: "400" }}>
-            {copied === "paytm" ? "✅ Copied!" : "Copy"}
-          </span>
-        </div>
-
-        {/* UPI ID Copy — GPay */}
-        <div onClick={() => copyUPI(UPI_ID_GPAY, "gpay")}
-          style={{
-            display: "inline-flex", alignItems: "center", gap: "10px",
-            background: "white", border: "1px dashed #34A853", borderRadius: "10px",
-            padding: "10px 20px", cursor: "pointer", fontSize: "14px",
-            fontWeight: "600", color: "#34A853", marginBottom: "1.5rem",
-          }}>
-          <span>📋</span>
-          <span>{UPI_ID_GPAY}</span>
-          <span style={{ fontSize: "12px", color: copied === "gpay" ? "#16A34A" : "#9CA3AF", fontWeight: "400" }}>
-            {copied === "gpay" ? "✅ Copied!" : "Copy"}
-          </span>
-        </div>
-
-        {/* Thank You */}
+        {/* Thank You Message */}
         {thankYou && (
           <div style={{
-            marginTop: "1rem", background: "#F0FDF4", border: "1px solid #86EFAC",
+            background: "#F0FDF4", border: "1px solid #86EFAC",
             color: "#16A34A", borderRadius: "10px", padding: "12px 20px",
-            fontSize: "14px", fontWeight: "600", maxWidth: "360px", margin: "1rem auto 0",
+            fontSize: "14px", fontWeight: "600", maxWidth: "360px", margin: "0 auto 1rem",
           }}>
             🎉 Bahut shukriya! Aapka support hamare liye bahut mayne rakhta hai! ❤️
           </div>
         )}
+
+        {/* Help text */}
+        <p style={{ color: "#9CA3AF", fontSize: "12px", marginTop: "0.5rem" }}>
+          ✨ Koi bhi UPI app se pay kar sakte ho — GPay, PhonePe, Paytm, BHIM
+        </p>
       </div>
 
       {/* ── Footer ── */}
