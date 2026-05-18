@@ -2,18 +2,18 @@ import { useState, useRef, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { repoApi, aiApi } from '../services/api'
-import { Send, Bot, User, Loader2, FolderGit2, Plus, MessageSquare } from 'lucide-react'
+import { Send, Bot, User, Loader2, FolderGit2, Plus, MessageSquare, X, ChevronDown } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import toast from 'react-hot-toast'
 
 function Message({ msg }) {
   const isAI = msg.sender === 'AI' || msg.role === 'AI'
   return (
-    <div className={`flex gap-3 ${isAI ? '' : 'flex-row-reverse'}`}>
-      <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${isAI ? 'bg-brand-600' : 'bg-gray-700'}`}>
-        {isAI ? <Bot className="w-4 h-4 text-white" /> : <User className="w-4 h-4 text-white" />}
+    <div className={`flex gap-2 ${isAI ? '' : 'flex-row-reverse'}`}>
+      <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-1 ${isAI ? 'bg-brand-600' : 'bg-gray-700'}`}>
+        {isAI ? <Bot className="w-3.5 h-3.5 text-white" /> : <User className="w-3.5 h-3.5 text-white" />}
       </div>
-      <div className={`max-w-[75%] px-4 py-3 rounded-2xl text-sm ${
+      <div className={`max-w-[80%] px-3 py-2.5 rounded-2xl text-sm leading-relaxed ${
         isAI
           ? 'bg-gray-800 text-gray-200 rounded-tl-sm'
           : 'bg-brand-600 text-white rounded-tr-sm'
@@ -61,7 +61,9 @@ export default function ChatPage() {
   const [selectedRepo, setSelectedRepo] = useState(repoId ? Number(repoId) : null)
   const [conversations, setConversations] = useState([])
   const [activeConvId, setActiveConvId] = useState(null)
+  const [showMobileHistory, setShowMobileHistory] = useState(false)
   const bottomRef = useRef(null)
+  const inputRef = useRef(null)
 
   const { data: repos = [] } = useQuery({
     queryKey: ['repositories'],
@@ -75,9 +77,7 @@ export default function ChatPage() {
       if (data && data.length > 0) {
         const grouped = groupByDate(data)
         const convList = Object.entries(grouped).map(([date, msgs], idx) => ({
-          id: idx,
-          date,
-          messages: msgs,
+          id: idx, date, messages: msgs,
           title: getConversationTitle(msgs),
         }))
         setConversations(convList.reverse())
@@ -98,15 +98,24 @@ export default function ChatPage() {
     if (repoId) setSelectedRepo(Number(repoId))
   }, [repoId])
 
+  // Mobile history open hone pe scroll band
+  useEffect(() => {
+    document.body.style.overflow = showMobileHistory ? 'hidden' : ''
+    return () => { document.body.style.overflow = '' }
+  }, [showMobileHistory])
+
   const startNewChat = () => {
     setActiveConvId(null)
     setMessages([])
     setInput('')
+    setShowMobileHistory(false)
+    setTimeout(() => inputRef.current?.focus(), 100)
   }
 
   const openConversation = (conv) => {
     setActiveConvId(conv.id)
     setMessages(conv.messages)
+    setShowMobileHistory(false)
   }
 
   const sendMessage = async (e) => {
@@ -127,8 +136,7 @@ export default function ChatPage() {
       setConversations((prev) => {
         if (activeConvId === null) {
           const newConv = {
-            id: Date.now(),
-            date: 'Today',
+            id: Date.now(), date: 'Today',
             title: currentInput.length > 35 ? currentInput.substring(0, 35) + '...' : currentInput,
             messages: [userMsg, aiMsg],
           }
@@ -136,9 +144,7 @@ export default function ChatPage() {
           return [newConv, ...prev]
         } else {
           return prev.map((c) =>
-            c.id === activeConvId
-              ? { ...c, messages: [...c.messages, userMsg, aiMsg] }
-              : c
+            c.id === activeConvId ? { ...c, messages: [...c.messages, userMsg, aiMsg] } : c
           )
         }
       })
@@ -152,72 +158,114 @@ export default function ChatPage() {
 
   const completedRepos = repos.filter((r) => r.status === 'COMPLETED')
 
+  // ── History Panel (shared between desktop sidebar & mobile drawer)
+  const HistoryPanel = () => (
+    <div className="flex flex-col h-full">
+      <div className="p-3 border-b border-gray-800">
+        <button
+          onClick={startNewChat}
+          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-gray-700 hover:bg-gray-800 text-gray-300 text-sm transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          New Chat
+        </button>
+      </div>
+      <div className="flex-1 overflow-y-auto px-2 py-3">
+        {conversations.length === 0 ? (
+          <p className="text-center text-gray-600 text-xs mt-6 px-4">
+            No conversations yet. Start chatting!
+          </p>
+        ) : (
+          <>
+            <p className="text-xs text-gray-500 px-2 pb-2 uppercase tracking-wider font-medium">Recent</p>
+            {conversations.map((conv) => (
+              <button
+                key={conv.id}
+                onClick={() => openConversation(conv)}
+                className={`w-full text-left flex items-start gap-2 px-3 py-2.5 rounded-lg mb-1 transition-colors ${
+                  activeConvId === conv.id
+                    ? 'bg-gray-800 text-white'
+                    : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                }`}
+              >
+                <MessageSquare className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm truncate">{conv.title}</p>
+                  <p className="text-xs text-gray-600 mt-0.5">{conv.date}</p>
+                </div>
+              </button>
+            ))}
+          </>
+        )}
+      </div>
+    </div>
+  )
+
   return (
-    <div className="flex h-full">
+    <div className="flex h-full overflow-hidden">
 
-      {/* LEFT SIDEBAR */}
-      <div className="w-64 bg-gray-950 border-r border-gray-800 flex flex-col flex-shrink-0">
-        <div className="p-3">
-          <button
-            onClick={startNewChat}
-            className="w-full flex items-center gap-2 px-4 py-2.5 rounded-lg border border-gray-700 hover:bg-gray-800 text-gray-300 text-sm transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            New Chat
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto px-2 pb-4">
-          {conversations.length === 0 ? (
-            <p className="text-center text-gray-600 text-xs mt-8 px-4">
-              No conversations yet. Start chatting!
-            </p>
-          ) : (
-            <>
-              <p className="text-xs text-gray-500 px-2 py-2 uppercase tracking-wider font-medium">
-                Recent
-              </p>
-              {conversations.map((conv) => (
-                <button
-                  key={conv.id}
-                  onClick={() => openConversation(conv)}
-                  className={`w-full text-left flex items-start gap-2 px-3 py-2.5 rounded-lg mb-1 transition-colors ${
-                    activeConvId === conv.id
-                      ? 'bg-gray-800 text-white'
-                      : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-                  }`}
-                >
-                  <MessageSquare className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm truncate">{conv.title}</p>
-                    <p className="text-xs text-gray-600 mt-0.5">{conv.date}</p>
-                  </div>
-                </button>
-              ))}
-            </>
-          )}
-        </div>
+      {/* ── Desktop: Left History Sidebar ── */}
+      <div className="hidden lg:flex w-60 bg-gray-950 border-r border-gray-800 flex-col flex-shrink-0">
+        <HistoryPanel />
       </div>
 
-      {/* MAIN CHAT AREA */}
-      <div className="flex flex-col flex-1 min-w-0">
+      {/* ── Mobile: History Drawer Overlay ── */}
+      {showMobileHistory && (
+        <div
+          className="fixed inset-0 z-50 bg-black/60 lg:hidden"
+          style={{ backdropFilter: 'blur(2px)' }}
+          onClick={() => setShowMobileHistory(false)}
+        />
+      )}
+      <div
+        className="fixed top-0 left-0 h-full w-72 bg-gray-900 border-r border-gray-800 z-50 flex flex-col lg:hidden transition-transform duration-300 ease-in-out"
+        style={{ transform: showMobileHistory ? 'translateX(0)' : 'translateX(-100%)' }}
+      >
+        <div className="flex items-center justify-between px-4 py-4 border-b border-gray-800">
+          <span className="font-semibold text-white text-sm">Chat History</span>
+          <button
+            onClick={() => setShowMobileHistory(false)}
+            className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <HistoryPanel />
+      </div>
+
+      {/* ── Main Chat Area ── */}
+      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+
         {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-800 bg-gray-900 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-brand-600/10 rounded-lg">
-              <Bot className="w-5 h-5 text-brand-400" />
+        <div className="flex items-center gap-2 px-3 py-3 border-b border-gray-800 bg-gray-900 flex-shrink-0">
+
+          {/* Mobile: history toggle button */}
+          <button
+            onClick={() => setShowMobileHistory(true)}
+            className="lg:hidden flex items-center gap-1.5 px-2.5 py-2 rounded-lg border border-gray-700 hover:bg-gray-800 text-gray-400 text-xs transition-colors flex-shrink-0"
+          >
+            <MessageSquare className="w-3.5 h-3.5" />
+            <span>History</span>
+          </button>
+
+          {/* Bot icon + title */}
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <div className="p-1.5 bg-brand-600/10 rounded-lg flex-shrink-0">
+              <Bot className="w-4 h-4 text-brand-400" />
             </div>
-            <div>
-              <h1 className="font-semibold text-white">AI Chat</h1>
-              <p className="text-xs text-gray-400">Ask questions about your code</p>
+            <div className="min-w-0">
+              <h1 className="font-semibold text-white text-sm leading-tight">AI Chat</h1>
+              <p className="text-xs text-gray-500 truncate hidden sm:block">Ask questions about your code</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <FolderGit2 className="w-4 h-4 text-gray-400" />
+
+          {/* Repo selector */}
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <FolderGit2 className="w-3.5 h-3.5 text-gray-400 hidden sm:block" />
             <select
               value={selectedRepo || ''}
               onChange={(e) => setSelectedRepo(e.target.value ? Number(e.target.value) : null)}
-              className="bg-gray-800 border border-gray-700 text-gray-200 text-sm rounded-lg px-3 py-1.5 focus:outline-none focus:border-brand-500"
+              className="bg-gray-800 border border-gray-700 text-gray-200 text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-brand-500 max-w-[130px] sm:max-w-[180px]"
             >
               <option value="">General Chat</option>
               {completedRepos.map((r) => (
@@ -225,27 +273,36 @@ export default function ChatPage() {
               ))}
             </select>
           </div>
+
+          {/* Mobile: New chat button */}
+          <button
+            onClick={startNewChat}
+            className="lg:hidden p-2 rounded-lg border border-gray-700 hover:bg-gray-800 text-gray-400 transition-colors flex-shrink-0"
+            title="New Chat"
+          >
+            <Plus className="w-4 h-4" />
+          </button>
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-3">
           {messages.length === 0 && (
-            <div className="flex flex-col items-center justify-center h-full text-center">
-              <div className="p-4 bg-brand-600/10 rounded-2xl mb-4">
-                <Bot className="w-10 h-10 text-brand-400" />
+            <div className="flex flex-col items-center justify-center h-full text-center px-4">
+              <div className="p-4 bg-brand-600/10 rounded-2xl mb-3">
+                <Bot className="w-8 h-8 text-brand-400" />
               </div>
-              <h3 className="text-lg font-semibold text-white mb-2">AI Engineer Agent</h3>
-              <p className="text-gray-400 max-w-sm">
+              <h3 className="text-base font-semibold text-white mb-1">AI Engineer Agent</h3>
+              <p className="text-gray-400 text-sm max-w-xs leading-relaxed">
                 {selectedRepo
                   ? 'Ask me anything about the selected repository!'
                   : 'Select a repository for context-aware answers, or ask any coding question!'}
               </p>
-              <div className="grid grid-cols-1 gap-2 mt-4 w-full max-w-sm">
+              <div className="flex flex-col gap-2 mt-4 w-full max-w-xs">
                 {['What bugs can you find?', 'Explain the architecture', 'How can I improve this code?'].map((q) => (
                   <button
                     key={q}
-                    onClick={() => setInput(q)}
-                    className="text-left px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm rounded-lg transition-colors"
+                    onClick={() => { setInput(q); inputRef.current?.focus() }}
+                    className="text-left px-3 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm rounded-lg transition-colors"
                   >
                     {q}
                   </button>
@@ -253,16 +310,18 @@ export default function ChatPage() {
               </div>
             </div>
           )}
+
           {messages.map((msg) => (
             <Message key={msg.id} msg={msg} />
           ))}
+
           {loading && (
-            <div className="flex gap-3">
-              <div className="w-8 h-8 rounded-full bg-brand-600 flex items-center justify-center">
-                <Bot className="w-4 h-4 text-white" />
+            <div className="flex gap-2">
+              <div className="w-7 h-7 rounded-full bg-brand-600 flex items-center justify-center flex-shrink-0 mt-1">
+                <Bot className="w-3.5 h-3.5 text-white" />
               </div>
-              <div className="bg-gray-800 px-4 py-3 rounded-2xl rounded-tl-sm flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin text-brand-400" />
+              <div className="bg-gray-800 px-3 py-2.5 rounded-2xl rounded-tl-sm flex items-center gap-2">
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-brand-400" />
                 <span className="text-sm text-gray-400">Thinking...</span>
               </div>
             </div>
@@ -271,22 +330,27 @@ export default function ChatPage() {
         </div>
 
         {/* Input */}
-        <form onSubmit={sendMessage} className="p-4 border-t border-gray-800 bg-gray-900">
-          <div className="flex gap-3">
+        <form onSubmit={sendMessage} className="px-3 py-3 border-t border-gray-800 bg-gray-900 flex-shrink-0">
+          <div className="flex gap-2 items-end">
             <input
+              ref={inputRef}
               type="text"
-              className="input flex-1"
+              className="input flex-1 text-sm py-2.5 min-w-0"
               placeholder={selectedRepo ? 'Ask about this repository...' : 'Ask anything...'}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               disabled={loading}
+              style={{ fontSize: '16px' }}
             />
             <button
               type="submit"
               disabled={!input.trim() || loading}
-              className="btn-primary px-4 flex items-center gap-2"
+              className="btn-primary px-3 py-2.5 flex items-center gap-1.5 flex-shrink-0"
             >
-              <Send className="w-4 h-4" />
+              {loading
+                ? <Loader2 className="w-4 h-4 animate-spin" />
+                : <Send className="w-4 h-4" />
+              }
             </button>
           </div>
         </form>
